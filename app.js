@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises';
-
 import bodyParser from 'body-parser';
 import express from 'express';
 
@@ -23,10 +22,8 @@ app.get('/meals', async (req, res) => {
 app.post('/orders', async (req, res) => {
   const orderData = req.body.order;
 
-  if (orderData === null || orderData.items === null || orderData.items == []) {
-    return res
-      .status(400)
-      .json({ message: 'Missing data.' });
+  if (orderData === null || orderData.items === null || orderData.items.length === 0) {
+    return res.status(400).json({ message: 'Missing data.' });
   }
 
   if (
@@ -42,8 +39,7 @@ app.post('/orders', async (req, res) => {
     orderData.customer.city.trim() === ''
   ) {
     return res.status(400).json({
-      message:
-        'Missing data: Email, name, street, postal code or city is missing.',
+      message: 'Missing data: Email, name, street, postal code, or city is missing.',
     });
   }
 
@@ -51,11 +47,17 @@ app.post('/orders', async (req, res) => {
     ...orderData,
     id: (Math.random() * 1000).toString(),
   };
-  const orders = await fs.readFile('./data/orders.json', 'utf8');
-  const allOrders = JSON.parse(orders);
-  allOrders.push(newOrder);
-  await fs.writeFile('./data/orders.json', JSON.stringify(allOrders));
-  res.status(201).json({ message: 'Order created!' });
+
+  try {
+    const orders = await fs.readFile('./data/orders.json', 'utf8');
+    const allOrders = JSON.parse(orders);
+    allOrders.push(newOrder);
+    await fs.writeFile('./data/orders.json', JSON.stringify(allOrders));
+    res.status(201).json({ message: 'Order created!' });
+  } catch (error) {
+    console.error('Error writing to orders file:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
 });
 
 app.use((req, res) => {
@@ -63,7 +65,9 @@ app.use((req, res) => {
     return res.sendStatus(200);
   }
 
-  res.status(404).json({ message: 'hello user' });
+  res.status(404).json({ message: 'Not found' });
 });
 
-app.listen(3000);
+app.listen(3000, () => {
+  console.log('Server is running on port 3000');
+});
